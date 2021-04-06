@@ -50,7 +50,7 @@ First we install and load the necessary packages.
 
 ```{r load libraries, cache=T, message=FALSE, cache=T}
 .cran_packages <- c("ggplot2", "reshape2", "stringr","phangorn","DT")
-.bioc_packages <- c("dada2", "phyloseq","ShortRead","DECIPHER")
+.bioc_packages <- c("dada2", "phyloseq","ShortRead","DECIPHER","ggtree")
 .inst <- .cran_packages %in% installed.packages()
 if(any(!.inst)) {
    install.packages(.cran_packages[!.inst])
@@ -178,8 +178,7 @@ errR <- readRDS("./Raw_data/L3_dada2.errR.RDS")
 plotErrors(errR, nominalQ=TRUE)
 ```
 
-Points show the quality score dependent substitution rates while the red shows the calculated rates.
-Results show that overall substitution rates are even higher than what can be expected from the quality score.
+Points show the quality score dependent substitution rates while the red line shows the expected rates.
 
 **What do you observe regarding the expected vs the real error frequency?**
 
@@ -260,6 +259,7 @@ In the end a total of 83 valid ASVs were inferred representing 44016 reads (57%)
 This means we lost a total 43% of the reads while processing the data. These are quite common statistics.
 
 **How could these statistics be improved?**
+
 **How could the loss of reads impact interpretation of the data?**
 
 # Precision and recall
@@ -346,18 +346,19 @@ sum(seqtab.nochim[asvrefdist$dist>=6])
 
 As we can see there were quiet some ASVs which are not likely to be derived from the mock members.
 In binary terms, ie presence or absence, we can say we have a precision of 68/80 which is 79%. 
-Most of these are actually stealthy chimeras which 
+Most of these are actually stealthy chimeras.
 
+**What would the precision be if we consider the reads rather than the ASVs?**
 
 # Annotation 
 
 ## Phylogentic tree
 
-A phylogentic tree tries to capture the evolutionary relationships of various organims. We can use the sequence (dis)simmilarity of the ASVs to infer these phylogenetic relationsships. These trees help in generating context for our inferred sequences. 
+A phylogenetic tree tries to capture the evolutionary relationships of various organims. We can use the sequence (dis)simmilarity of the ASVs to infer these phylogenetic relationsships. These trees help in generating context for our inferred sequences. 
 
 ```{r}
-seqs <- asv.valid.seqs
-names(seqs) <- asv.valid.seqs
+seqs <- c(asv.valid.seqs,mock.comp$ASV)
+names(seqs) <- c(asvrefdist$name,mockrefdist$name)
 alignment <- AlignSeqs(DNAStringSet(seqs), anchor=NA)
 
 phang.align <- phyDat(as(alignment, "matrix"), type="DNA")
@@ -368,8 +369,36 @@ fit = pml(treeNJ, data=phang.align)
 fitGTR <- update(fit, k=4, inv=0.2)
 #fitGTR <- optim.pml(fitGTR, model="GTR", optInv=TRUE, optGamma=TRUE,
 #                      rearrangement = "stochastic", control = pml.control(trace = 0))
-fitGTR$tree
+fitGTR$tree <- midpoint(fitGTR$tree)
 ```
+
+Lets visualize the tree
+
+```{r, fig.height=12}
+library(ggplot2)
+library(ggtree)
+
+fitGTR$tree$tip.label <- gsub("Bifidobacterium ","B.",fitGTR$tree$tip.label) 
+fitGTR$tree$tip.label <- gsub("Parascardovia ","P.",fitGTR$tree$tip.label) 
+fitGTR$tree$tip.label <- gsub("Alloscardovia ","A.",fitGTR$tree$tip.label) 
+
+groupInfo <- rep("Silva",length(fitGTR$tree$tip.label))
+groupInfo[fitGTR$tree$tip.label %in% asvrefdist[asvrefdist$dist>=5,]$name] <- "Xeno_ASV"
+groupInfo[fitGTR$tree$tip.label %in% asvrefdist[asvrefdist$dist<5,]$name] <- "Valid_ASV"
+groupInfo[substr(fitGTR$tree$tip.label,1,3)=="MC_"] <- "MOCK"
+
+groupInfo <- split(fitGTR$tree$tip.label, groupInfo)
+
+fitGTR$tree <- groupOTU(fitGTR$tree, groupInfo)
+
+test <- fitGTR$tree
+attr(test, "Source") <- attributes(fitGTR$tree)$group
+
+
+p <- ggtree(test, layout = "rectangular")+ geom_tiplab(size=3, aes(color=Source),key_glyph = "rect", ) + ggplot2::xlim(0, 0.3)
+p
+```
+We can see that 
 
 ## Assing taxanomy 
 
@@ -389,15 +418,3 @@ With current day sequencing efforts we are better able to determine the phylogen
 tax <- assignTaxonomy(seqs = asv.valid.seqs,"./Raw_data/silva_nr_v132_train_set.fa.gz")
 ```
 
-
-## phyloseq
-
-```{r}
-```
-
-
-# Learning goals
-
-Some general insights into amplicon data characteristics.
-Biological variance vs technical variance.
-Bias in compositional data.
