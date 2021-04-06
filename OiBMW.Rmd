@@ -2,10 +2,13 @@
 title: "MiCA workshop ASV inference"
 output:
   html_document:
-    toc: true # table of content true
-    toc_depth: 2  # upto three depths of headings (specified by #, ## and ###)
-    number_sections: true  ## if you want number sections at each table header
-    theme: united  # many options for theme, this one is my favorite.
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+    theme: united
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
 ---
 
 <style>
@@ -14,10 +17,34 @@ p.caption {
 }
 </style>
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = T)
-knitr::opts_chunk$set(cache = T)
+```{r setup rmd, include=FALSE}
+# setting global options for the rmd markdown
+knitr::opts_chunk$set(echo = T) # include chunck code
+knitr::opts_chunk$set(cache = T) # use chuck results from cache if not modified (speed)
 ```
+
+# Assignment
+
+Most of the workflow is fixed and code can be run as is. 
+However, a few options are left for the students to modify. 
+
+**These and questions are indicated in bold.**
+**Plz adress these questions**
+
+You can modify this rmd document to adress the questions.
+
+Plz highlight your answers using:
+
+\<p style="color:red"> Your answer !\</p>
+
+<p style="color:red">
+Your answer !
+</p>
+
+Alternatively you can generate a pdf export form a word document if preferred. 
+Documents can be uploaded in the module on Canvas before April 24th. 
+
+**Note: It is not required to exactly read the code, but rather get a grasp of how the data is being processed and how this might impact downstream results**
 
 # Introduction
 
@@ -40,16 +67,13 @@ For visualization we use [ggplot2](https://ggplot2.tidyverse.org/).
 To merge and organize microbiome data we use [phyloseq](https://joey711.github.io/phyloseq/)
 DECIPHER and phangorn are used to generate a phylogenetic tree. 
 
-Most of the workflow is fixed and can be run as is. 
-However, some options are left for the student to tune.
-**These are indicated in bold.**
 
 # Configure R environment and get data
 
 First we install and load the necessary packages. 
 
-```{r load libraries, cache=T, message=FALSE, cache=T}
-.cran_packages <- c("ggplot2", "reshape2", "stringr","phangorn","DT")
+```{r load libraries, message=FALSE}
+.cran_packages <- c("ggplot2", "reshape2", "stringr","phangorn","DT","ape","ggrepel")
 .bioc_packages <- c("dada2", "phyloseq","ShortRead","DECIPHER","ggtree")
 .inst <- .cran_packages %in% installed.packages()
 if(any(!.inst)) {
@@ -60,8 +84,8 @@ if(any(!.inst)) {
    source("http://bioconductor.org/biocLite.R")
    biocLite(.bioc_packages[!.inst], ask = F)
 }
-sapply(c(.cran_packages, .bioc_packages), require, character.only = TRUE, quietly = T)
 
+sapply(c(.cran_packages, .bioc_packages), require, character.only = TRUE, quietly = T)
 theme_set(theme_bw())
 ```
 
@@ -88,7 +112,7 @@ So we see the sample has 74333 paired end reads. Furthermore, the quality of the
 A bit more intuitive way to look at the quality of the reads, is to look at the expected error rate. The following code reads the phred quality score from the fastq files and calculates the overall expected error for each of the reads. We will only take 1000 reads and plot the cumulative error rate along the read.
 The quality score is the log transformed likelihood that a particular call was erroneous.
 
-```{r plot Expected Error, cache=T}
+```{r plot Expected Error}
 # get the expected error rates and generate the data.frame
 cumelative_error_F <- apply(10^(-as.matrix(PhredQuality(quality(readFastq(FQF)[1:1000])))/10),1,cumsum)
 cumelative_error_R <- apply(10^(-as.matrix(PhredQuality(quality(readFastq(FQR)[1:1000])))/10),1,cumsum)
@@ -112,11 +136,11 @@ This shows that very few sequences are actually without error, and we can expect
 
 ## Read duplication
 
-If we assume that most errors are random, we can reason that most errors results in unique, singleton sequences, while sequences that are replicated are more likely to be true variants. 
+If we assume that most errors are random, we can reason that these errors will results in unique, singleton sequences, while sequences that are replicated are more likely to be true variants. 
 
-Dada2 requires a minimal of two observations of a sequence for it be even considered to be a true variant. How many unique sequences did we obtain? We use the `derepFastq` function from dada2 to dereplicate the forward and reverse reads.
+Dada2 requires a minimal of two observations of a sequence for it be even considered to be a true variant. We use the `derepFastq` function from DADA2 to dereplicate the forward and reverse reads.
 
-```{r, cache=T}
+```{r}
 drr <- derepFastq(FQF)
 drr
 sum(table(drr$map)==1)
@@ -137,7 +161,7 @@ Luckily we can remove some of the poor quality regions at the end of the reads r
 
 In contrast to the dada2 tutorial we do not filter on expected errors. We have found that sequence quality differs between amplicons and therefore quality filtering will skew the final composition.
 
-```{r filter and trim, cache=T}
+```{r filter and trim}
 length_trimmed_forward=240 # not optimal, check the error profiles for optimal trimming
 length_trimmed_reverse=240 # not optimal, check the error profiles for optimal trimming
   
@@ -152,7 +176,7 @@ out
 ```
 Check the duplication rate after trimming. 
 
-```{r derep trimmed fastq, cache=T}
+```{r derep trimmed fastq}
 drf <- derepFastq(FQFF)
 drf
 sum(table(drf$map)==1)
@@ -163,6 +187,10 @@ sum(table(drr$map)==1)
 ```
 
 **What happened tot the expected error rate and read duplication?**
+<p style="color:red">
+Answer?
+</p>
+
 
 ## Calculation of the batch specific error 
 
@@ -170,7 +198,7 @@ The second step in the process is the estimation of the batch specific error rat
 
 Error estimation is somewhat computational demanding and therefore pre-calculated error rates for this particular sequence run are supplied. (Otherwise error rates can be obtained using `?learnErrors`). The following plots can be used to asses the error models and should show linear decrease in substitution rates over quality scores.
 
-```{r Error rates, cache=T}
+```{r Error rates}
 errF <- readRDS("./Raw_data/L3_dada2.errF.RDS")
 plotErrors(errF, nominalQ=TRUE)
 
@@ -182,11 +210,11 @@ Points show the quality score dependent substitution rates while the red line sh
 
 **What do you observe regarding the expected vs the real error frequency?**
 
-## ASV Inference
+# ASV Inference
 
 The third step in the dada2 workflow is the actual inference of the ASVs. 
 
-```{r dada2 sequence inference, cache=T}
+```{r dada2 sequence inference}
 asv.f <- dada(derep = drf, err = errF)
 asv.f
 
@@ -204,20 +232,55 @@ Furthermore DADA2 did not find an suitable ASV representative for 18544 (25%) of
 **How do the forward and reverse read differ in performance?**
 **How could trimming differently improve these statistics?**
 
+## read to ASV mapping
+
+Old school OTU clustering methods rely on fixed sequence distances.
+
+Lets have a look at the read to ASV mapping. Lets select an arbitrary forward ASV and trace the reads.
+Both the derep and dada-class objects have a mapping file. Lets first retrieve the reads from the fastq file.
+
+```{r}
+asv.f$denoised[4]
+F_ASV_4.FQ <- Biostrings::readQualityScaledDNAStringSet(FQFF)[drf$map %in% which(asv.f$map %in% "4")]
+```
+In total 2457 reads map to this ASV.
+
+When we align the reads with the ASV we can calculate the hamming distance, which should represent the true sequencing error.
+
+```{r}
+read_asv_ham_dist <- nwhamming(as.character(F_ASV_4.FQ), asv.f$sequence[4])
+summary(read_asv_ham_dist)
+barplot(table(read_asv_ham_dist)); abline(v = 2.4*3, col="red")
+sum(read_asv_ham_dist>7.2)
+```
+
+As we can see most of the reads have at least one error and roughly 15% of the reads have more than 3% error rate. 
+
+**If we take this particular subset of sequences and would run a OTU clustering based approach, what would the results look like?**
+
+We can now also explore the expected error rate versus the true erro rate.
+
+```{r}
+plot(apply(10^(-as.matrix(PhredQuality(F_ASV_4.FQ@quality))/10),1,sum), read_asv_ham_dist, 
+     xlab="Expected Error", ylab="Read-ASV Hamming distance")
+```
+
+**What do you observe in terms of expected error versus true error rate?**
+
 ## ASV pair merging
 
 To get a single representative ASV sequence, forward and reverse ASV pairs are merged. Only those pairs that can be joined with at least a 20 bases overlap and without any mismatches are accepted.
 
-```{r dada2 asv merging, cache=T}
+```{r dada2 asv merging}
 asv.m <- mergePairs(dadaF = asv.f, derepF = drf, dadaR = asv.r, derepR = drr, returnRejects = T, maxMismatch = 0)
-head(asv.m)
+DT::datatable(asv.m)
 ```
 
-This table shows the statistics for the top 10 most abundant asv pairs. Forward and reverse read mismatching is a common problem of Illumina sequencing. Therefore significant amount of reads are lost in this process.
+This table shows the statistics for all the asv pairs. Forward and reverse read mismatching is a common problem of Illumina sequencing. Therefore significant amount of reads are lost in this process.
 
 How many ASVs do we have and how many reads do they represent?
 
-```{r explore merging, cache=T}
+```{r explore merging}
 length(asv.m$accept)
 sum(asv.m$accept)
 sum(asv.m[asv.m$accept,]$abundance)
@@ -239,7 +302,7 @@ if (knitr:::is_latex_output()) {
 
 DADA2 has a function `isBimeraDenovo` to detect these chimeric sequences. 
 
-```{r dada2 detect bimera, cache=T}
+```{r dada2 detect bimera}
 seqtab <- makeSequenceTable(asv.m[asv.m$accept,])
 bimeras <- isBimeraDenovo(seqtab)
 asv.m$bimera <- bimeras[asv.m$sequence]
@@ -270,7 +333,7 @@ To determine the accuracy and precision of our data, we compare the valid ASVs t
 
 The reference sequences contain the entire 16S gene. In order to compare it to the data we can perform an in silico pcr to determine the expected ASV. 
 
-```{r compare ASV to reference, cache=T}
+```{r compare ASV to reference}
 asv.valid.seqs <- names(seqtab.nochim)
 # read in the sequences of the mock
 mockref <- as.character(readDNAStringSet("./Raw_data/Mock_reference_NoN.fasta"))
@@ -350,15 +413,39 @@ Most of these are actually stealthy chimeras.
 
 **What would the precision be if we consider the reads rather than the ASVs?**
 
-# Annotation 
+# ASV Annotation
 
-## Phylogentic tree
+Since ASV sequences by themselve are none informative we need to put them into context. We use phylogenetic trees to put the sequences in evolutionary context, while we use taxonomy in order to put them in scientific context. 
+
+## Assigning taxonomy 
+
+Taxonomy is how we classify organisms into specific groups at certain ranks. Taxonomy tries to capture phylogeny (evolutionary relationships) at a coarse level.
+
+```{r, echo=F, fig.cap="Fig 3. Main taxonomic ranks", out.width="20%"}
+if (knitr:::is_latex_output()) {
+  knitr::asis_output('\\url{....}')
+} else {
+  knitr::include_graphics("./Figures/taxanomic_ranks.png")
+}
+```
+
+Lets assign taxonomy to the inferred ASV sequences. DADA2 implements a variant of the (RDP) naive bayes classifier. In short kmer profiles from the ASV sequences are compared to those in a curated taxonomy reference database. In this case the reference database is Silva V132. 
+
+```{r}
+tax <- assignTaxonomy(seqs = asv.valid.seqs,"./Raw_data/silva_nr_v132_train_set.fa.gz")
+```
+```{r}
+# lets inlcude the Genus taxonomy in the name of the ASV
+asvrefdist$name_genus <- paste(asvrefdist$name,tax[asv.valid.seqs,"Genus"])
+```
+
+## Phylogenetic tree
 
 A phylogenetic tree tries to capture the evolutionary relationships of various organims. We can use the sequence (dis)simmilarity of the ASVs to infer these phylogenetic relationsships. These trees help in generating context for our inferred sequences. 
 
 ```{r}
 seqs <- c(asv.valid.seqs,mock.comp$ASV)
-names(seqs) <- c(asvrefdist$name,mockrefdist$name)
+names(seqs) <- c(asvrefdist$name_genus,mockrefdist$name)
 alignment <- AlignSeqs(DNAStringSet(seqs), anchor=NA)
 
 phang.align <- phyDat(as(alignment, "matrix"), type="DNA")
@@ -374,17 +461,10 @@ fitGTR$tree <- midpoint(fitGTR$tree)
 
 Lets visualize the tree
 
-```{r, fig.height=12}
-library(ggplot2)
-library(ggtree)
-
-fitGTR$tree$tip.label <- gsub("Bifidobacterium ","B.",fitGTR$tree$tip.label) 
-fitGTR$tree$tip.label <- gsub("Parascardovia ","P.",fitGTR$tree$tip.label) 
-fitGTR$tree$tip.label <- gsub("Alloscardovia ","A.",fitGTR$tree$tip.label) 
-
+```{r, fig.height=18}
 groupInfo <- rep("Silva",length(fitGTR$tree$tip.label))
-groupInfo[fitGTR$tree$tip.label %in% asvrefdist[asvrefdist$dist>=5,]$name] <- "Xeno_ASV"
-groupInfo[fitGTR$tree$tip.label %in% asvrefdist[asvrefdist$dist<5,]$name] <- "Valid_ASV"
+groupInfo[fitGTR$tree$tip.label %in% asvrefdist[asvrefdist$dist>=5,]$name_genus] <- "Xeno_ASV"
+groupInfo[fitGTR$tree$tip.label %in% asvrefdist[asvrefdist$dist<5,]$name_genus] <- "Valid_ASV"
 groupInfo[substr(fitGTR$tree$tip.label,1,3)=="MC_"] <- "MOCK"
 
 groupInfo <- split(fitGTR$tree$tip.label, groupInfo)
@@ -398,23 +478,57 @@ attr(test, "Source") <- attributes(fitGTR$tree)$group
 p <- ggtree(test, layout = "rectangular")+ geom_tiplab(size=3, aes(color=Source),key_glyph = "rect", ) + ggplot2::xlim(0, 0.3)
 p
 ```
-We can see that 
 
-## Assing taxanomy 
+We can see that most of the ASVs and mock sequences occur in pairs and their associated taxonomies are mostly congruent.
+The sequences that do not get classified at Genus level (NA) are all 
 
-Taxonomy is how we classify organisms in specific groups at certain ranks. While taxonomy tries to capture phylogeny (evolutionary relationships) at a course level, most of the classical labeling is based on phenotypic data which has resulted
+## Abundance correlation
 
-```{r, echo=F, fig.cap="Fig 3. Main taxonomic ranks", out.width="20%"}
-if (knitr:::is_latex_output()) {
-  knitr::asis_output('\\url{....}')
-} else {
-  knitr::include_graphics("./Figures/taxanomic_ranks.png")
-}
-```
-
-With current day sequencing efforts we are better able to determine the phylogenetic relations which i
+Various steps in generating and processing of the data results in bias in the observed final composition. Since taxonomy is too coarse grained and potentially biased, lets cluster the ASVs based on the distance in the tree.
 
 ```{r}
-tax <- assignTaxonomy(seqs = asv.valid.seqs,"./Raw_data/silva_nr_v132_train_set.fa.gz")
+dd = as.dist(cophenetic.phylo(fitGTR$tree))
+psclust = cutree(hclust(dd), h = 0.05)
 ```
+
+**I've aggregated the tree tips at a semi arbitrary distance of 0.05. How would the results change if I would use a much higher or lower cutoff?**
+
+Lets aggregate the ASV abundance and mock composition, based on the clustering of the tree.
+Once weve clustered the ASV and mock sequences we can compare the expected versus the observed relative abundances. 
+
+```{r, fig.height=12, fig.width=12}
+seqtab.nochim.relabu <- seqtab.nochim/sum(seqtab.nochim)
+
+Abundances <- c(seqtab.nochim.relabu, mock.comp$MC3/100)
+names(Abundances) <- names(seqs)
+
+cluster_list <- split(names(psclust), psclust)
+names(cluster_list) <- unlist(lapply(cluster_list, function(x) names(which.max(Abundances[x])))) # representative sequence
+
+cl.abundance_sample <- aggregate(seqtab.nochim.relabu, by=list(psclust[c(asvrefdist$name_genus)]), FUN=sum)
+cl.abundance_mock <- aggregate(mock.comp$MC3/100, by=list(psclust[c(mockrefdist$name)]), FUN=sum)
+
+rownames(cl.abundance_sample) <- names(cluster_list)[cl.abundance_sample[,1]]
+rownames(cl.abundance_mock) <- names(cluster_list)[cl.abundance_mock[,1]]
+
+df <- data.frame(label=names(cluster_list),
+                 sample=cl.abundance_sample[names(cluster_list),2],
+                 mock=cl.abundance_mock[names(cluster_list),2]
+                 )
+df[is.na(df)] <- 0
+
+ggplot(df, aes(x=sample, y=mock)) + 
+  geom_point(size=3) + 
+  ggrepel::geom_text_repel(aes(label=label)) + 
+  geom_abline(slope = 1) + 
+  #scale_x_log10() + 
+  #scale_y_log10() +
+  NULL
+
+```
+
+While we can observe some bias for specific groups like Akkermansia and Roseburia overall there is significant correlation betweem the observed and expected abundance. 
+
+**How does the observed species specific bias impact the data?**
+**Note, we measured a fixed set of reads**
 
