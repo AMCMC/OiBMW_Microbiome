@@ -30,8 +30,8 @@ Note: Als je een error krijgt bij het installeren van de packeges met de melding
 
 
 Als je [git](https://git-scm.com/downloads) geinstalleerd hebt kan je de github direct clonen vanuit Rstudio;
+In Rstudio kunnen jullie de github loaden via projects => Version control => Git => https://github.com/AMCMC/OiBMW_Microbiome
 
-ALs je deze rmd file opent in Rstudio kun je de losse "chuncks" runnen.
 
 ```{r, echo=F, fig.cap="Fig 1. Single step 16S rRNA gene amplicon Illumina library preparation"}
 if (knitr:::is_latex_output()) {
@@ -41,8 +41,17 @@ if (knitr:::is_latex_output()) {
 }
 ```
 
-# Assignment
+ALs je deze rmd file opent in Rstudio kun je de losse "chuncks" runnen.
 
+```{r, echo=F, fig.cap="Fig 1. Single step 16S rRNA gene amplicon Illumina library preparation"}
+if (knitr:::is_latex_output()) {
+  knitr::asis_output('\\url{....}')
+} else {
+  knitr::include_graphics("./Figures/rmd_from_rstudio.png")
+}
+```
+
+# Assignment
 
 Most of the workflow is fixed and code can be run as is. 
 However, a few options are left for the students to modify. 
