@@ -31,6 +31,8 @@ Note: Als je een error krijgt bij het installeren van de packeges met de melding
 
 Als je [git](https://git-scm.com/downloads) geinstalleerd hebt kan je de github direct clonen vanuit Rstudio;
 
+ALs je deze rmd file opent in Rstudio kun je de losse "chuncks" runnen.
+
 ```{r, echo=F, fig.cap="Fig 1. Single step 16S rRNA gene amplicon Illumina library preparation"}
 if (knitr:::is_latex_output()) {
   knitr::asis_output('\\url{....}')
@@ -68,6 +70,7 @@ Documents can be uploaded in the module on Canvas before April 24th.
 To determine the microbiome composition of a particular environment amplicon sequencing is the most commonly used approach. Specific primers targeting universal genes are used to amplify these taxonomic marker sequences. The obtained amplified sequences (amplicons) can than be sequenced using various platforms. The main task when analyzing these datasets is to determine which are true biological sequences and which are technical noise.
 
 ```{r, echo=F, fig.cap="Fig 1. Single step 16S rRNA gene amplicon Illumina library preparation"}
+if (!"knitr" %in% installed.packages()){install.packages("knitr")}
 if (knitr:::is_latex_output()) {
   knitr::asis_output('\\url{....}')
 } else {
@@ -90,7 +93,7 @@ DECIPHER and phangorn are used to generate a phylogenetic tree.
 First we install and load the necessary packages. 
 
 ```{r load libraries, message=FALSE}
-.cran_packages <- c("ggplot2", "reshape2", "stringr","phangorn","DT","ape","ggrepel")
+.cran_packages <- c("ggplot2", "reshape2", "stringr","phangorn","DT","ape","ggrepel","knitr","Hmisc")
 .bioc_packages <- c("dada2", "phyloseq","ShortRead","DECIPHER","ggtree")
 .inst <- .cran_packages %in% installed.packages()
 if(any(!.inst)) {
