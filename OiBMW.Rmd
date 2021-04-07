@@ -23,7 +23,24 @@ knitr::opts_chunk$set(echo = T) # include chunck code
 knitr::opts_chunk$set(cache = T) # use chuck results from cache if not modified (speed)
 ```
 
+# Last minut comments/edits
+
+
+Note: Als je een error krijgt bij het installeren van de packeges met de melding permission denied, kan je Rstudio opnieuw opstarten als administator: (Rechter muisknop -> Als administrator uitvoeren)
+
+
+Als je [git](https://git-scm.com/downloads) geinstalleerd hebt kan je de github direct clonen vanuit Rstudio;
+
+```{r, echo=F, fig.cap="Fig 1. Single step 16S rRNA gene amplicon Illumina library preparation"}
+if (knitr:::is_latex_output()) {
+  knitr::asis_output('\\url{....}')
+} else {
+  knitr::include_graphics("./Figures/Load_data.png")
+}
+```
+
 # Assignment
+
 
 Most of the workflow is fixed and code can be run as is. 
 However, a few options are left for the students to modify. 
