@@ -62,6 +62,9 @@ if (knitr:::is_latex_output()) {
 }
 ```
 
+Some systems require [Rtools](https://cran.r-project.org/bin/windows/Rtools/) to be installed (windows);
+Please installed if required.
+
 # Assignment
 
 Most of the workflow is fixed and code can be run as is. 
@@ -119,11 +122,19 @@ First we install and load the necessary packages.
 if(any(!.inst)) {
    install.packages(.cran_packages[!.inst])
 }
-.inst <- .bioc_packages %in% installed.packages()
+
+# R version check!
+.inst.bc <- .bioc_packages %in% installed.packages()
 if(any(!.inst)) {
    source("http://bioconductor.org/biocLite.R")
    biocLite(.bioc_packages[!.inst], ask = F)
 }
+
+.inst.bc <- .bioc_packages %in% installed.packages()
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(version = "3.12")
+BiocManager::install(.bioc_packages[!.inst.bc])
 
 sapply(c(.cran_packages, .bioc_packages), require, character.only = TRUE, quietly = T)
 theme_set(theme_bw())
