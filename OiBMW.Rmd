@@ -33,7 +33,7 @@ Als je [git](https://git-scm.com/downloads) geinstalleerd hebt kan je de github 
 In Rstudio kunnen jullie de github loaden via projects => Version control => Git => https://github.com/AMCMC/OiBMW_Microbiome
 
 
-```{r, echo=F, fig.cap="Fig 1. Single step 16S rRNA gene amplicon Illumina library preparation"}
+```{r, echo=F, fig.cap=""}
 if (knitr:::is_latex_output()) {
   knitr::asis_output('\\url{....}')
 } else {
@@ -41,9 +41,20 @@ if (knitr:::is_latex_output()) {
 }
 ```
 
+Alternative is downloaden als zip;
+
+```{r, echo=F, fig.cap=""}
+if (knitr:::is_latex_output()) {
+  knitr::asis_output('\\url{....}')
+} else {
+  knitr::include_graphics("./Figures/Manual_Download_github.png")
+}
+```
+
+
 ALs je deze rmd file opent in Rstudio kun je de losse "chuncks" runnen.
 
-```{r, echo=F, fig.cap="Fig 1. Single step 16S rRNA gene amplicon Illumina library preparation"}
+```{r, echo=F, fig.cap=""}
 if (knitr:::is_latex_output()) {
   knitr::asis_output('\\url{....}')
 } else {
@@ -560,4 +571,3 @@ While we can observe some bias for specific groups like Akkermansia and Roseburi
 
 **How does the observed species specific bias impact the data?**
 **Note, we measured a fixed set of reads**
-
