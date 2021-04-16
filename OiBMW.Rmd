@@ -115,9 +115,12 @@ DECIPHER and phangorn are used to generate a phylogenetic tree.
 
 First we install and load the necessary packages. 
 
-```{r load libraries, message=FALSE}
+```{r load libraries}
 .cran_packages <- c("ggplot2", "reshape2", "stringr","phangorn","DT","ape","ggrepel","knitr","Hmisc")
 .bioc_packages <- c("dada2", "phyloseq","ShortRead","DECIPHER","ggtree")
+```
+
+```{r, eval=F, message=FALSE, include=F}
 .inst <- .cran_packages %in% installed.packages()
 if(any(!.inst)) {
    install.packages(.cran_packages[!.inst])
@@ -135,7 +138,9 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 BiocManager::install(version = "3.12")
 BiocManager::install(.bioc_packages[!.inst.bc])
+```
 
+```{r, warning=F}
 sapply(c(.cran_packages, .bioc_packages), require, character.only = TRUE, quietly = T)
 theme_set(theme_bw())
 ```
@@ -180,7 +185,13 @@ ggplot(df.long, aes(x=Var1, y=value)) +
   geom_smooth(stat = 'summary', color = 'red', fill = 'red', alpha = 0.2, 
                 fun.data = median_hilow, fun.args = list(conf.int = 0.9)) + 
   geom_smooth(stat = 'summary', color = 'blue', fill = 'blue', alpha = 0.2, 
-                fun.data = median_hilow, fun.args = list(conf.int = 0.50))
+                fun.data = median_hilow, fun.args = list(conf.int = 0.50)) +
+  geom_hline(yintercept = 1.35)
+
+ee <- 1.35
+sum(c(rowMedians(cumelative_error_F)<ee),rowMedians(cumelative_error_R)<ee)
+sum(rowMedians(cumelative_error_F)<ee)
+sum(rowMedians(cumelative_error_R)<ee)
 ```
 
 This shows that very few sequences are actually without error, and we can expect, on average, 2 errors in the forward read and 3 in the reverse read. 
@@ -291,15 +302,16 @@ Lets have a look at the read to ASV mapping. Lets select an arbitrary forward AS
 Both the derep and dada-class objects have a mapping file. Lets first retrieve the reads from the fastq file.
 
 ```{r}
-asv.f$denoised[4]
-F_ASV_4.FQ <- Biostrings::readQualityScaledDNAStringSet(FQFF)[drf$map %in% which(asv.f$map %in% "4")]
+x=40
+asv.f$denoised[x]
+F_ASV_4.FQ <- Biostrings::readQualityScaledDNAStringSet(FQFF)[drf$map %in% which(asv.f$map %in% x)]
 ```
 In total 2457 reads map to this ASV.
 
 When we align the reads with the ASV we can calculate the hamming distance, which should represent the true sequencing error.
 
 ```{r}
-read_asv_ham_dist <- nwhamming(as.character(F_ASV_4.FQ), asv.f$sequence[4])
+read_asv_ham_dist <- nwhamming(as.character(F_ASV_4.FQ), asv.f$sequence[x])
 summary(read_asv_ham_dist)
 barplot(table(read_asv_ham_dist)); abline(v = 2.4*3, col="red")
 sum(read_asv_ham_dist>7.2)
@@ -308,6 +320,42 @@ sum(read_asv_ham_dist>7.2)
 As we can see most of the reads have at least one error and roughly 15% of the reads have more than 3% error rate. 
 
 **If we take this particular subset of sequences and would run a OTU clustering based approach, what would the results look like?**
+
+We can visualize the distance between the reads that map to this particular ASV using a tree. We will allign all vs all reads and calculate the hamming distance. The code is very inefficient and just for show casing the sequence variance within the ASV.
+
+```{r}
+seq_abun <- data.frame(abundance=table(as.character(F_ASV_4.FQ)))
+seq_abun$hamming_distance <- nwhamming(as.character(seq_abun$abundance.Var1), asv.f$sequence[x])
+# 
+# ggplot(seq_abun, aes(x=abundance.Freq, y=hamming_distance)) + geom_point() + scale_x_log10() + geom_hline(yintercept = 7.5) + geom_hline(yintercept = 2.5)
+
+#compare all vs all; very computational intesive
+asv.dist.mat <- lapply(as.character(seq_abun$abundance.Var1), function(x) nwhamming(as.character(seq_abun$abundance.Var1), x))
+```
+
+Cluster the sequences in a hierachical tree and color the tips according to the OTU cluster.
+
+```{r}
+simmat <- do.call(rbind, asv.dist.mat)/430
+tree <- hclust(as.dist(simmat))
+OTU <- cutree(tree = tree, h = 0.03)
+table(OTU)
+plot.phylo(as.phylo(tree), direction = "downwards", show.tip.label = T, tip.color = rainbow(length(unique(OTU)))[OTU])
+```
+
+As you can see `r length(table(OTU))` unique OTUs would be formed if we would cluster the reads at 97% identity. 
+We can also visualize the variance using a Principal coordinate analysis. 
+
+```{r, warning=F, error=F, comment=F}
+PCoA <- pcoa(as.dist(simmat))
+
+df <- data.frame(cbind(PCoA$vectors[,1:2]))
+df$cluster <- as.factor(OTU)
+df$abundance <- seq_abun$abundance.Freq
+
+suppressMessages(ggplot(df, aes(x=Axis.1, y=Axis.2, size=abundance, color=cluster)) + geom_point() + stat_ellipse(data = df[df$cluster %in% names(which(table(df$cluster)>3)),]))
+```
+
 
 We can now also explore the expected error rate versus the true erro rate.
 
